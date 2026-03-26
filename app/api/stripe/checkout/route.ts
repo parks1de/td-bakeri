@@ -1,9 +1,13 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-03-25.dahlia" });
-
 export async function POST(req: NextRequest) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
+  }
+
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-03-25.dahlia" });
+
   const body = await req.json();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
 
@@ -15,7 +19,7 @@ export async function POST(req: NextRequest) {
         price_data: {
           currency: "nok",
           product_data: {
-            name: "Kakebestilling depositum – T&D Bakeri",
+            name: "Kakebestilling depositum - T&D Bakeri",
             description: `Depositum for bestillingskake. Henting: ${body.pickupDate} kl. ${body.pickupTime}`,
             images: [`${baseUrl}/images/logo.png`],
           },
