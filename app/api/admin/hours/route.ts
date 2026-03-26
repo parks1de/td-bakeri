@@ -1,4 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 import { readHours, writeHours } from "@/lib/hours";
 
 function checkAuth(req: NextRequest): boolean {

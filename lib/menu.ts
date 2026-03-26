@@ -1,4 +1,4 @@
-﻿import fs from "fs";
+import fs from "fs";
 import path from "path";
 
 export interface MenuItem {
@@ -15,9 +15,15 @@ export interface MenuItem {
 
 const filePath = path.join(process.cwd(), "data", "menu.json");
 
+const FALLBACK: MenuItem[] = [];
+
 export function readMenu(): MenuItem[] {
-  const raw = fs.readFileSync(filePath, "utf-8");
-  return JSON.parse(raw) as MenuItem[];
+  try {
+    const raw = fs.readFileSync(filePath, "utf-8");
+    return JSON.parse(raw) as MenuItem[];
+  } catch {
+    return FALLBACK;
+  }
 }
 
 export function writeMenu(items: MenuItem[]): void {

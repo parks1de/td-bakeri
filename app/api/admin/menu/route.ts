@@ -1,4 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
 import { readMenu, writeMenu, MenuItem } from "@/lib/menu";
 
 function checkAuth(req: NextRequest): boolean {

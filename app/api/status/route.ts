@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getOpenStatus } from "@/lib/hours";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +8,10 @@ export function GET() {
     const status = getOpenStatus();
     return NextResponse.json(status);
   } catch {
-    return NextResponse.json({ isOpen: false, label: "Status utilgjengelig", source: "error" });
+    return NextResponse.json({
+      isOpen: false,
+      statusKey: "status_unavailable",
+      source: "error",
+    });
   }
 }
