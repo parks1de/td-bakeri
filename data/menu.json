@@ -1,0 +1,101 @@
+[
+  {
+    "id": "1",
+    "category": "Kaker",
+    "title": "Sjokoladekake",
+    "description": "Rik og saftig sjokoladekake med kremet ganache og friske baer. Bakt med belgisk sjokolade.",
+    "price": 450,
+    "image": "/images/placeholder.jpg",
+    "allergies": [
+      "Gluten",
+      "Egg",
+      "Melk",
+      "Soya"
+    ],
+    "variants": [
+      "Liten (6 pers)",
+      "Medium (10 pers)",
+      "Stor (16 pers)"
+    ],
+    "visible": true
+  },
+  {
+    "id": "2",
+    "category": "Kaker",
+    "title": "Vaniljekake",
+    "description": "Klassisk vaniljekake med luftig kremflote og sesongens friske baer.",
+    "price": 400,
+    "image": "/images/placeholder.jpg",
+    "allergies": [
+      "Gluten",
+      "Egg",
+      "Melk"
+    ],
+    "variants": [
+      "Liten (6 pers)",
+      "Medium (10 pers)",
+      "Stor (16 pers)"
+    ],
+    "visible": true
+  },
+  {
+    "id": "3",
+    "category": "Bakverk",
+    "title": "Croissant",
+    "description": "Spro og smorrik croissant laget av langtidshevet deig med norsk smor.",
+    "price": 45,
+    "image": "/images/placeholder.jpg",
+    "allergies": [
+      "Gluten",
+      "Melk",
+      "Egg"
+    ],
+    "variants": [],
+    "visible": true
+  },
+  {
+    "id": "4",
+    "category": "Bakverk",
+    "title": "Kanelsnurr",
+    "description": "Hjemmelaget kanelsnurr med kanel, kardemomme og glasur. Nybakt hver dag.",
+    "price": 35,
+    "image": "/images/placeholder.jpg",
+    "allergies": [
+      "Gluten",
+      "Melk",
+      "Egg"
+    ],
+    "variants": [],
+    "visible": true
+  },
+  {
+    "id": "5",
+    "category": "Brod",
+    "title": "Surdeigbrod",
+    "description": "48-timers kaldtfermentert surdeig med apen smuler og karamellisert skorpe.",
+    "price": 120,
+    "image": "/images/placeholder.jpg",
+    "allergies": [
+      "Gluten"
+    ],
+    "variants": [
+      "Halvt",
+      "Helt"
+    ],
+    "visible": true
+  },
+  {
+    "id": "6",
+    "category": "Brod",
+    "title": "Grovbrod",
+    "description": "Naeringsrikt grovbrod med fro, notter og fullkorn.",
+    "price": 95,
+    "image": "/images/placeholder.jpg",
+    "allergies": [
+      "Gluten",
+      "Notter"
+    ],
+    "variants": [],
+    "visible": true
+  }
+]

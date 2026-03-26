@@ -1,0 +1,30 @@
+{
+  "override": null,
+  "schedule": {
+    "mandag": null,
+    "tirsdag": {
+      "open": "09:00",
+      "close": "18:00"
+    },
+    "onsdag": {
+      "open": "09:00",
+      "close": "18:00"
+    },
+    "torsdag": {
+      "open": "09:00",
+      "close": "18:00"
+    },
+    "fredag": {
+      "open": "09:00",
+      "close": "18:00"
+    },
+    "lordag": {
+      "open": "09:00",
+      "close": "18:00"
+    },
+    "sondag": {
+      "open": "09:00",
+      "close": "18:00"
+    }
+  }
+}
