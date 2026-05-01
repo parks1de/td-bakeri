@@ -3,9 +3,9 @@ import { getOpenStatus } from "@/lib/hours";
 
 export const dynamic = "force-dynamic";
 
-export function GET() {
+export async function GET() {
   try {
-    const status = getOpenStatus();
+    const status = await getOpenStatus();
     return NextResponse.json(status);
   } catch {
     return NextResponse.json({

@@ -1,5 +1,4 @@
-import fs from "fs";
-import path from "path";
+import { sanityClient } from "@/lib/sanityClient";
 
 export type DaySchedule = { open: string; close: string } | null;
 
@@ -8,31 +7,15 @@ export interface HoursConfig {
   schedule: Record<string, DaySchedule>;
 }
 
-const filePath = path.join(process.cwd(), "data", "hours.json");
-
-export function readHours(): HoursConfig {
-  try {
-    const raw = fs.readFileSync(filePath, "utf-8");
-    return JSON.parse(raw) as HoursConfig;
-  } catch {
-    return {
-      override: null,
-      schedule: {
-        mandag: null,
-        tirsdag: { open: "09:00", close: "18:00" },
-        onsdag:  { open: "09:00", close: "18:00" },
-        torsdag: { open: "09:00", close: "18:00" },
-        fredag:  { open: "09:00", close: "18:00" },
-        lordag:  { open: "09:00", close: "18:00" },
-        sondag:  { open: "09:00", close: "18:00" },
-      },
-    };
-  }
-}
-
-export function writeHours(config: HoursConfig): void {
-  fs.writeFileSync(filePath, JSON.stringify(config, null, 2), "utf-8");
-}
+const DEFAULT_SCHEDULE: Record<string, DaySchedule> = {
+  mandag: null,
+  tirsdag: { open: "09:00", close: "18:00" },
+  onsdag: { open: "09:00", close: "18:00" },
+  torsdag: { open: "09:00", close: "18:00" },
+  fredag: { open: "09:00", close: "18:00" },
+  lordag: { open: "09:00", close: "18:00" },
+  sondag: { open: "09:00", close: "18:00" },
+};
 
 const dayNames: Record<number, string> = {
   0: "sondag",
@@ -46,20 +29,47 @@ const dayNames: Record<number, string> = {
 
 export interface OpenStatusResult {
   isOpen: boolean;
-  /** i18n key — resolved by the client via tr(lang, statusKey) */
   statusKey:
     | "status_manual_open"
     | "status_manual_closed"
     | "status_closed_today"
     | "status_open"
     | "status_closed";
-  /** time string e.g. "09:00" — used by client for "Opens at XX:XX" */
   time?: string;
   source: "override" | "schedule";
 }
 
-export function getOpenStatus(): OpenStatusResult {
-  const config = readHours();
+const HOURS_QUERY = `*[_type == "hoursConfig" && _id == "singleton-hoursConfig"][0]{
+  manualOverride,
+  schedule[]{ day, isClosed, openTime, closeTime }
+}`;
+
+export async function getHoursConfig(): Promise<HoursConfig> {
+  try {
+    const doc = await sanityClient.fetch(HOURS_QUERY);
+    if (!doc) return { override: null, schedule: DEFAULT_SCHEDULE };
+
+    const schedule: Record<string, DaySchedule> = {};
+    for (const entry of doc.schedule ?? []) {
+      schedule[entry.day] = entry.isClosed
+        ? null
+        : { open: entry.openTime ?? "09:00", close: entry.closeTime ?? "18:00" };
+    }
+
+    return {
+      override:
+        !doc.manualOverride || doc.manualOverride === "auto"
+          ? null
+          : (doc.manualOverride as "open" | "closed"),
+      schedule: Object.keys(schedule).length > 0 ? schedule : DEFAULT_SCHEDULE,
+    };
+  } catch {
+    return { override: null, schedule: DEFAULT_SCHEDULE };
+  }
+}
+
+export async function getOpenStatus(): Promise<OpenStatusResult> {
+  const config = await getHoursConfig();
 
   if (config.override === "open") {
     return { isOpen: true, statusKey: "status_manual_open", source: "override" };
