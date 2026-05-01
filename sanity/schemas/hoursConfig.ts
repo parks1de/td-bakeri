@@ -80,15 +80,15 @@ export const hoursConfig = defineType({
               openTime,
               closeTime,
             }: {
-              day: string;
-              isClosed: boolean;
-              openTime: string;
-              closeTime: string;
+              day?: string;
+              isClosed?: boolean;
+              openTime?: string;
+              closeTime?: string;
             }) {
-              const label = DAYS.find((d) => d.value === day)?.title ?? day;
+              const label = DAYS.find((d) => d.value === day)?.title ?? day ?? "";
               return {
                 title: label,
-                subtitle: isClosed ? "Stengt" : `${openTime} – ${closeTime}`,
+                subtitle: isClosed ? "Stengt" : `${openTime ?? "?"} – ${closeTime ?? "?"}`,
               };
             },
           },
@@ -98,7 +98,7 @@ export const hoursConfig = defineType({
   ],
   preview: {
     select: { manualOverride: "manualOverride" },
-    prepare({ manualOverride }: { manualOverride: string }) {
+    prepare({ manualOverride }: { manualOverride?: string }) {
       const label =
         manualOverride === "open"
           ? "Tving OPEN"
