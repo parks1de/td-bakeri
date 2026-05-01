@@ -7,7 +7,7 @@ export default function AdminLogin(){
   const [loading,setLoading]=useState(false);
   const login=async(e:React.FormEvent)=>{
     e.preventDefault();setLoading(true);setError("");
-    const res=await fetch("/api/admin/menu",{headers:{"x-admin-password":pw}});
+    const res=await fetch("/api/admin/hours",{headers:{"x-admin-password":pw}});
     if(res.ok){
       sessionStorage.setItem("admin_pw",pw);
       window.location.href="/admin/meny";
