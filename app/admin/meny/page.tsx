@@ -13,9 +13,9 @@ export default function AdminMenyPage() {
   const [pw, setPw] = useState("");
   const [hours, setHours] = useState<HC | null>(null);
   const [toast, setToast] = useState("");
-  const [bulkDays, setBulkDays] = useState<Record<string, boolean>>({ mandag: false, tirsdag: true, onsdag: true, torsdag: true, fredag: true, lordag: true, sondag: true });
-  const [bulkOpen, setBulkOpen] = useState("09:00");
-  const [bulkClose, setBulkClose] = useState("18:00");
+  const [selectedDays, setSelectedDays] = useState<Record<string, boolean>>({});
+  const [editOpen, setEditOpen] = useState("09:00");
+  const [editClose, setEditClose] = useState("18:00");
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
   const hdr = useCallback(() => ({ "Content-Type": "application/json", "x-admin-password": pw }), [pw]);
@@ -33,22 +33,35 @@ export default function AdminMenyPage() {
   const setOv = async (val: "open" | "closed" | null) => {
     await fetch("/api/admin/hours", { method: "PUT", headers: hdr(), body: JSON.stringify({ override: val }) });
     setHours(h => h ? { ...h, override: val } : h);
-    showToast(val === "open" ? "Satt til OPEN" : val === "closed" ? "Satt til STENGT" : "Override fjerna");
+    showToast(val === "open" ? "Satt til OPEN" : val === "closed" ? "Satt til STENGT" : "Override fjerna — følgjer timeplan");
   };
 
-  const applyBulk = async (closed: boolean) => {
-    if (!hours) return;
-    const selected = DAYS.filter(d => bulkDays[d]);
-    if (selected.length === 0) { showToast("Ingen dagar valt"); return; }
+  const toggleDay = (day: string) => {
+    setSelectedDays(prev => {
+      const next = { ...prev, [day]: !prev[day] };
+      // pre-fill time inputs from first selected day that has hours
+      const firstActive = DAYS.find(d => (d === day ? !prev[day] : prev[d]) && hours?.schedule[d]);
+      if (firstActive && hours?.schedule[firstActive]) {
+        setEditOpen(hours.schedule[firstActive]!.open);
+        setEditClose(hours.schedule[firstActive]!.close);
+      }
+      return next;
+    });
+  };
+
+  const anySelected = DAYS.some(d => selectedDays[d]);
+
+  const applyToSelected = async (closed: boolean) => {
+    if (!hours || !anySelected) return;
     const newSchedule = { ...hours.schedule };
-    for (const d of selected) newSchedule[d] = closed ? null : { open: bulkOpen, close: bulkClose };
+    const changed = DAYS.filter(d => selectedDays[d]);
+    for (const d of changed) newSchedule[d] = closed ? null : { open: editOpen, close: editClose };
     const u = { ...hours, schedule: newSchedule };
     setHours(u);
+    setSelectedDays({});
     await fetch("/api/admin/hours", { method: "PUT", headers: hdr(), body: JSON.stringify({ schedule: newSchedule }) });
-    showToast(closed ? `${selected.length} dagar sett som stengt` : `${selected.length} dagar oppdatert til ${bulkOpen}–${bulkClose}`);
+    showToast(closed ? `${changed.length} dag(ar) sett som stengt` : `${changed.length} dag(ar): ${editOpen}–${editClose}`);
   };
-
-  const toggleBulkDay = (day: string) => setBulkDays(prev => ({ ...prev, [day]: !prev[day] }));
 
   return (
     <div style={{ background: "#0a0a0a", minHeight: "100vh", padding: "60px 0" }}>
@@ -57,7 +70,9 @@ export default function AdminMenyPage() {
           ✓ {toast}
         </div>
       )}
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 24px" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 24px" }}>
+
+        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 40, flexWrap: "wrap", gap: 16 }}>
           <div>
             <div style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#b8960c", marginBottom: 6 }}>Admin</div>
@@ -73,129 +88,110 @@ export default function AdminMenyPage() {
         </div>
 
         {/* Sanity Studio link */}
-        <div style={{ background: "linear-gradient(135deg,#0e0c02,#060604)", border: "1px solid rgba(184,150,12,0.25)", borderRadius: 16, padding: "28px 32px", marginBottom: 32, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 20 }}>
+        <div style={{ background: "linear-gradient(135deg,#0e0c02,#060604)", border: "1px solid rgba(184,150,12,0.25)", borderRadius: 16, padding: "24px 28px", marginBottom: 32, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
           <div>
-            <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#b8960c", marginBottom: 8 }}>Meny & produktar</div>
-            <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.2rem", color: "#f0e6d0", marginBottom: 6 }}>Sanity Studio</h2>
-            <p style={{ fontSize: "0.84rem", color: "#5a4a3a", maxWidth: 420 }}>
-              Alle menyprodukt og kategoriar vert redigert i Sanity Studio.
-            </p>
+            <div style={{ fontSize: "0.66rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#b8960c", marginBottom: 6 }}>Meny & produkt</div>
+            <p style={{ fontSize: "0.84rem", color: "#5a4a3a" }}>Legg til og endre menyprodukt i Sanity Studio</p>
           </div>
           <Link href="https://tdbakeri.sanity.studio" target="_blank"
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 50, background: "linear-gradient(135deg,#d4a820,#8b6914)", color: "#0a0a0a", fontWeight: 700, fontSize: "0.84rem", letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 24px", borderRadius: 50, background: "linear-gradient(135deg,#d4a820,#8b6914)", color: "#0a0a0a", fontWeight: 700, fontSize: "0.82rem", letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
             Opne Studio →
           </Link>
         </div>
 
         {hours && (
-          <div style={{ display: "grid", gap: 24 }}>
+          <div style={{ display: "grid", gap: 20 }}>
 
-            {/* Manual override */}
-            <div style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: 16, padding: "28px" }}>
-              <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.2rem", color: "#d4a820", marginBottom: 8 }}>Manuell overstyring</h2>
-              <p style={{ color: "#5a4a3a", fontSize: "0.86rem", marginBottom: 20 }}>Overstyrer opningstidene umiddelbart — uavhengig av timeplanen under.</p>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <button onClick={() => setOv("open")}
-                  style={{ padding: "12px 24px", borderRadius: 50, border: `2px solid ${hours.override === "open" ? "#4ade80" : "#2a2a2a"}`, background: hours.override === "open" ? "rgba(74,222,128,0.15)" : "transparent", color: hours.override === "open" ? "#4ade80" : "#5a4a3a", fontWeight: 600, fontSize: "0.9rem", cursor: "pointer", transition: "all 0.2s" }}>
-                  ✅ Tving OPEN
+            {/* ── OPEN / CLOSE NOW ── */}
+            <div style={{ background: "#0f0f0f", border: "1px solid #1e1e1e", borderRadius: 20, padding: "32px 28px" }}>
+              <div style={{ fontSize: "0.66rem", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "#5a4a3a", marginBottom: 6 }}>Rask overstyring</div>
+              <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.35rem", color: "#f0e6d0", marginBottom: 24 }}>Opne eller steng butikken no</h2>
+
+              <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                <button onClick={() => setOv(hours.override === "open" ? null : "open")}
+                  style={{
+                    padding: "16px 36px", borderRadius: 50, fontSize: "1rem", fontWeight: 700, cursor: "pointer", transition: "all 0.2s", letterSpacing: "0.04em",
+                    border: `2px solid ${hours.override === "open" ? "#4ade80" : "#2a3a2a"}`,
+                    background: hours.override === "open" ? "rgba(74,222,128,0.18)" : "rgba(74,222,128,0.04)",
+                    color: hours.override === "open" ? "#4ade80" : "#3a6a3a",
+                    boxShadow: hours.override === "open" ? "0 0 20px rgba(74,222,128,0.15)" : "none",
+                  }}>
+                  {hours.override === "open" ? "✅ OPEN NO" : "OPNE NO"}
                 </button>
-                <button onClick={() => setOv("closed")}
-                  style={{ padding: "12px 24px", borderRadius: 50, border: `2px solid ${hours.override === "closed" ? "#f87171" : "#2a2a2a"}`, background: hours.override === "closed" ? "rgba(248,113,113,0.15)" : "transparent", color: hours.override === "closed" ? "#f87171" : "#5a4a3a", fontWeight: 600, fontSize: "0.9rem", cursor: "pointer", transition: "all 0.2s" }}>
-                  ❌ Tving STENGT
+                <button onClick={() => setOv(hours.override === "closed" ? null : "closed")}
+                  style={{
+                    padding: "16px 36px", borderRadius: 50, fontSize: "1rem", fontWeight: 700, cursor: "pointer", transition: "all 0.2s", letterSpacing: "0.04em",
+                    border: `2px solid ${hours.override === "closed" ? "#f87171" : "#3a2a2a"}`,
+                    background: hours.override === "closed" ? "rgba(248,113,113,0.18)" : "rgba(248,113,113,0.04)",
+                    color: hours.override === "closed" ? "#f87171" : "#6a3a3a",
+                    boxShadow: hours.override === "closed" ? "0 0 20px rgba(248,113,113,0.15)" : "none",
+                  }}>
+                  {hours.override === "closed" ? "❌ STENGT NO" : "STENG NO"}
                 </button>
-                {hours.override && (
-                  <button onClick={() => setOv(null)}
-                    style={{ padding: "12px 24px", borderRadius: 50, border: "2px solid #2a2a2a", background: "transparent", color: "#7a6a4a", fontWeight: 600, fontSize: "0.9rem", cursor: "pointer" }}>
-                    Tilbake til normal
-                  </button>
-                )}
               </div>
+
               {hours.override && (
-                <div style={{ marginTop: 16, padding: "10px 16px", background: "rgba(184,150,12,0.07)", border: "1px solid rgba(184,150,12,0.2)", borderRadius: 8, fontSize: "0.84rem", color: "#b8960c" }}>
-                  Aktiv overstyring: <strong>{hours.override === "open" ? "OPEN" : "STENGT"}</strong>
+                <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ padding: "8px 16px", background: "rgba(184,150,12,0.07)", border: "1px solid rgba(184,150,12,0.2)", borderRadius: 8, fontSize: "0.84rem", color: "#b8960c" }}>
+                    Aktiv overstyring: <strong>{hours.override === "open" ? "OPEN" : "STENGT"}</strong>
+                  </div>
+                  <button onClick={() => setOv(null)}
+                    style={{ fontSize: "0.8rem", color: "#4a3a2a", background: "none", border: "1px solid #2a2a2a", borderRadius: 50, padding: "6px 16px", cursor: "pointer" }}>
+                    Tilbake til timeplan
+                  </button>
                 </div>
               )}
             </div>
 
-            {/* Bulk set */}
-            <div style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: 16, padding: "28px" }}>
-              <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.2rem", color: "#d4a820", marginBottom: 8 }}>Sett fleire dagar samtidig</h2>
-              <p style={{ color: "#5a4a3a", fontSize: "0.86rem", marginBottom: 20 }}>Huk av dagane du vil endre, set tid og trykk «Bruk».</p>
+            {/* ── OPENING HOURS ── */}
+            <div style={{ background: "#0f0f0f", border: "1px solid #1e1e1e", borderRadius: 20, padding: "32px 28px" }}>
+              <div style={{ fontSize: "0.66rem", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "#5a4a3a", marginBottom: 6 }}>Timeplan</div>
+              <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.35rem", color: "#f0e6d0", marginBottom: 6 }}>Opningstider</h2>
+              <p style={{ fontSize: "0.84rem", color: "#4a3a2a", marginBottom: 24 }}>Vel ein eller fleire dagar, set tid, trykk Lagre.</p>
 
-              {/* Day checkboxes */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
-                {DAYS.map(day => (
-                  <button key={day} onClick={() => toggleBulkDay(day)}
-                    style={{ padding: "8px 16px", borderRadius: 50, border: `2px solid ${bulkDays[day] ? "#d4a820" : "#2a2a2a"}`, background: bulkDays[day] ? "rgba(212,168,32,0.12)" : "transparent", color: bulkDays[day] ? "#d4a820" : "#4a3a2a", fontWeight: 600, fontSize: "0.82rem", cursor: "pointer", transition: "all 0.18s" }}>
-                    {DL[day]}
-                  </button>
-                ))}
-              </div>
-
-              {/* Time inputs + actions */}
-              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <input type="time" value={bulkOpen} onChange={e => setBulkOpen(e.target.value)}
-                  className="input" style={{ width: 110 }} />
-                <span style={{ color: "#4a3a2a" }}>–</span>
-                <input type="time" value={bulkClose} onChange={e => setBulkClose(e.target.value)}
-                  className="input" style={{ width: 110 }} />
-                <button onClick={() => applyBulk(false)}
-                  style={{ padding: "10px 22px", borderRadius: 50, background: "linear-gradient(135deg,#d4a820,#8b6914)", color: "#0a0a0a", fontWeight: 700, fontSize: "0.82rem", border: "none", cursor: "pointer" }}>
-                  Bruk på valde
-                </button>
-                <button onClick={() => applyBulk(true)}
-                  style={{ padding: "10px 22px", borderRadius: 50, border: "2px solid rgba(248,113,113,0.3)", background: "transparent", color: "#f87171", fontWeight: 600, fontSize: "0.82rem", cursor: "pointer" }}>
-                  Merk stengt
-                </button>
-              </div>
-            </div>
-
-            {/* Per-day schedule */}
-            <div style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: 16, padding: "28px" }}>
-              <h2 style={{ fontFamily: "Georgia,serif", fontSize: "1.2rem", color: "#d4a820", marginBottom: 20 }}>Vekeplan</h2>
-              <div style={{ display: "grid", gap: 12 }}>
+              {/* Day selector */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
                 {DAYS.map(day => {
                   const s = hours.schedule[day];
+                  const sel = !!selectedDays[day];
                   return (
-                    <div key={day} style={{ display: "flex", alignItems: "center", gap: 16, padding: "12px 0", borderBottom: "1px solid #161616", flexWrap: "wrap" }}>
-                      <span style={{ minWidth: 90, fontSize: "0.88rem", fontWeight: 600, color: "#8a7a5a" }}>{DL[day]}</span>
-                      {s ? (
-                        <>
-                          <input type="time" value={s.open} onChange={async e => {
-                            const u = { ...hours, schedule: { ...hours.schedule, [day]: { open: e.target.value, close: s.close } } };
-                            setHours(u);
-                            await fetch("/api/admin/hours", { method: "PUT", headers: hdr(), body: JSON.stringify({ schedule: u.schedule }) });
-                          }} className="input" style={{ width: 110 }} />
-                          <span style={{ color: "#4a3a2a" }}>–</span>
-                          <input type="time" value={s.close} onChange={async e => {
-                            const u = { ...hours, schedule: { ...hours.schedule, [day]: { open: s.open, close: e.target.value } } };
-                            setHours(u);
-                            await fetch("/api/admin/hours", { method: "PUT", headers: hdr(), body: JSON.stringify({ schedule: u.schedule }) });
-                          }} className="input" style={{ width: 110 }} />
-                          <button onClick={async () => {
-                            const u = { ...hours, schedule: { ...hours.schedule, [day]: null } };
-                            setHours(u);
-                            await fetch("/api/admin/hours", { method: "PUT", headers: hdr(), body: JSON.stringify({ schedule: u.schedule }) });
-                          }} style={{ fontSize: "0.78rem", color: "#f87171", background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 8, padding: "4px 12px", cursor: "pointer" }}>
-                            Stengt
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <span style={{ fontSize: "0.84rem", color: "#3a3030" }}>Stengt</span>
-                          <button onClick={async () => {
-                            const u = { ...hours, schedule: { ...hours.schedule, [day]: { open: "09:00", close: "18:00" } } };
-                            setHours(u);
-                            await fetch("/api/admin/hours", { method: "PUT", headers: hdr(), body: JSON.stringify({ schedule: u.schedule }) });
-                          }} style={{ fontSize: "0.78rem", color: "#4ade80", background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 8, padding: "4px 12px", cursor: "pointer" }}>
-                            + Opne
-                          </button>
-                        </>
-                      )}
-                    </div>
+                    <button key={day} onClick={() => toggleDay(day)}
+                      style={{
+                        padding: "9px 18px", borderRadius: 50, fontSize: "0.84rem", fontWeight: 600, cursor: "pointer", transition: "all 0.18s",
+                        border: `2px solid ${sel ? "#d4a820" : "#1e1e1e"}`,
+                        background: sel ? "rgba(212,168,32,0.14)" : "#141414",
+                        color: sel ? "#d4a820" : s ? "#6a5a3a" : "#3a2a2a",
+                      }}>
+                      {DL[day]}
+                      <span style={{ marginLeft: 6, fontSize: "0.72rem", opacity: 0.7 }}>
+                        {s ? `${s.open}–${s.close}` : "stengt"}
+                      </span>
+                    </button>
                   );
                 })}
               </div>
+
+              {/* Time editor — shown when days are selected */}
+              {anySelected && (
+                <div style={{ background: "#161410", border: "1px solid #2a2010", borderRadius: 12, padding: "20px 24px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "0.82rem", color: "#8a7a4a", marginRight: 4 }}>Tid:</span>
+                  <input type="time" value={editOpen} onChange={e => setEditOpen(e.target.value)} className="input" style={{ width: 110 }} />
+                  <span style={{ color: "#4a3a2a" }}>–</span>
+                  <input type="time" value={editClose} onChange={e => setEditClose(e.target.value)} className="input" style={{ width: 110 }} />
+                  <button onClick={() => applyToSelected(false)}
+                    style={{ padding: "10px 24px", borderRadius: 50, background: "linear-gradient(135deg,#d4a820,#8b6914)", color: "#0a0a0a", fontWeight: 700, fontSize: "0.82rem", border: "none", cursor: "pointer" }}>
+                    Lagre
+                  </button>
+                  <button onClick={() => applyToSelected(true)}
+                    style={{ padding: "10px 20px", borderRadius: 50, border: "2px solid rgba(248,113,113,0.3)", background: "transparent", color: "#f87171", fontWeight: 600, fontSize: "0.82rem", cursor: "pointer" }}>
+                    Stengt
+                  </button>
+                  <button onClick={() => setSelectedDays({})}
+                    style={{ fontSize: "0.78rem", color: "#3a3a3a", background: "none", border: "none", cursor: "pointer", marginLeft: 4 }}>
+                    Avbryt
+                  </button>
+                </div>
+              )}
             </div>
 
           </div>
