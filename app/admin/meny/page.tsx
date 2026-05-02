@@ -17,8 +17,18 @@ export default function AdminMenyPage() {
   const [editOpen, setEditOpen] = useState("09:00");
   const [editClose, setEditClose] = useState("18:00");
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
+  const showToast = (msg: string, err = false) => { setToast((err ? "⚠ " : "✓ ") + msg); setTimeout(() => setToast(""), 5000); };
   const hdr = useCallback(() => ({ "Content-Type": "application/json", "x-admin-password": pw }), [pw]);
+
+  const put = useCallback(async (body: object): Promise<boolean> => {
+    const r = await fetch("/api/admin/hours", { method: "PUT", headers: hdr(), body: JSON.stringify(body) });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      showToast(err.error ?? `Feil ${r.status} — sjekk at ADMIN_PASSWORD og SANITY_WRITE_TOKEN er satt i Vercel`, true);
+      return false;
+    }
+    return true;
+  }, [hdr]);
 
   useEffect(() => {
     const p = sessionStorage.getItem("admin_pw");
@@ -31,7 +41,8 @@ export default function AdminMenyPage() {
   }, [router]);
 
   const setOv = async (val: "open" | "closed" | null) => {
-    await fetch("/api/admin/hours", { method: "PUT", headers: hdr(), body: JSON.stringify({ override: val }) });
+    const ok = await put({ override: val });
+    if (!ok) return;
     setHours(h => h ? { ...h, override: val } : h);
     showToast(val === "open" ? "Satt til OPEN" : val === "closed" ? "Satt til STENGT" : "Override fjerna — følgjer timeplan");
   };
@@ -56,18 +67,18 @@ export default function AdminMenyPage() {
     const newSchedule = { ...hours.schedule };
     const changed = DAYS.filter(d => selectedDays[d]);
     for (const d of changed) newSchedule[d] = closed ? null : { open: editOpen, close: editClose };
-    const u = { ...hours, schedule: newSchedule };
-    setHours(u);
+    const ok = await put({ schedule: newSchedule });
+    if (!ok) return;
+    setHours({ ...hours, schedule: newSchedule });
     setSelectedDays({});
-    await fetch("/api/admin/hours", { method: "PUT", headers: hdr(), body: JSON.stringify({ schedule: newSchedule }) });
     showToast(closed ? `${changed.length} dag(ar) sett som stengt` : `${changed.length} dag(ar): ${editOpen}–${editClose}`);
   };
 
   return (
     <div style={{ background: "#0a0a0a", minHeight: "100vh", padding: "60px 0" }}>
       {toast && (
-        <div style={{ position: "fixed", top: 80, right: 24, background: "#1a1a1a", border: "1px solid rgba(184,150,12,0.4)", borderRadius: 12, padding: "12px 20px", color: "#d4a820", fontSize: "0.88rem", zIndex: 999 }}>
-          ✓ {toast}
+        <div style={{ position: "fixed", top: 80, right: 24, background: "#1a1a1a", border: `1px solid ${toast.startsWith("⚠") ? "rgba(248,113,113,0.4)" : "rgba(184,150,12,0.4)"}`, borderRadius: 12, padding: "12px 20px", color: toast.startsWith("⚠") ? "#f87171" : "#d4a820", fontSize: "0.88rem", zIndex: 999, maxWidth: 340 }}>
+          {toast}
         </div>
       )}
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 24px" }}>
