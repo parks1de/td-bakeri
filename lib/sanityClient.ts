@@ -15,6 +15,14 @@ export const sanityWriteClient = createClient({
   token: process.env.SANITY_WRITE_TOKEN,
 });
 
+// No CDN, no token — for reads that must be fresh (e.g. open/close status)
+export const sanityLiveClient = createClient({
+  projectId: "u7hre29r",
+  dataset: "production",
+  apiVersion: "2024-01-01",
+  useCdn: false,
+});
+
 export interface SanityCategory {
   title: string;
   slug: string;

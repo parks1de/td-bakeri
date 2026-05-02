@@ -1,4 +1,4 @@
-import { sanityClient } from "@/lib/sanityClient";
+import { sanityLiveClient } from "@/lib/sanityClient";
 
 export type DaySchedule = { open: string; close: string } | null;
 
@@ -46,7 +46,7 @@ const HOURS_QUERY = `*[_type == "hoursConfig" && _id == "singleton-hoursConfig"]
 
 export async function getHoursConfig(): Promise<HoursConfig> {
   try {
-    const doc = await sanityClient.fetch(HOURS_QUERY);
+    const doc = await sanityLiveClient.fetch(HOURS_QUERY);
     if (!doc) return { override: null, schedule: DEFAULT_SCHEDULE };
 
     const schedule: Record<string, DaySchedule> = {};
